@@ -6,6 +6,15 @@
 
 #define DEBUG 0
 
+public Plugin myinfo = 
+{
+	name = "TF2 Rune API", 
+	author = "Scag", 
+	description = "Some extra stuff for TF2's powerups", 
+	version = "1.0.0", 
+	url = ""
+};
+
 GlobalForward
 	hOnRuneSpawn,
 	hOnRuneSpawnPost,
