@@ -1,0 +1,30 @@
+"Games"
+{
+	/* Team Fortress 2 */
+	"tf"
+	{
+		"Offsets"
+		{
+			"CTFRune::MyTouch"
+			{
+				"windows" 	"221"
+				"linux" 	"222"
+			}
+
+			"CTFRune::ItemCanBeTouchedByPlayer"
+			{
+				"windows" 	"222"
+				"linux" 	"225"
+			}
+		}
+		"Signatures"
+		{
+			"CTFRune::CreateRune"
+			{
+				"library" 	"server"
+				"windows" 	"\x55\x8B\xEC\x83\xEC\x0C\x8B\x45\x08\x56\x57\x6A\x00"
+				"linux" 	"@_ZN7CTFRune10CreateRuneERK6Vector11RuneTypes_tibbS0_"
+			}
+		}
+	}
+}
