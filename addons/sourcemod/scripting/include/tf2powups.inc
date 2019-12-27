@@ -63,7 +63,7 @@ native int TF2_CreateRune(float pos[3], RuneTypes type, int teammaybe = -2, bool
  *
  *	@return 			Rune that was dropped, -1 if there wasn't one
 **/
-native int TF2_DropRune(int client, bool throw, int teammaybe);
+native int TF2_DropRune(int client, bool thrown, int teammaybe);
 
 /**
  *	When a rune is created
