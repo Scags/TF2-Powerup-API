@@ -1,2 +1,2 @@
 # TF2-Powerup-API
- Quick TF2 rune stuff
+ Applicable API for spawning/editing TF2 powerups
