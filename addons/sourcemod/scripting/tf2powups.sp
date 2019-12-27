@@ -18,30 +18,25 @@ public Plugin myinfo =
 GlobalForward
 	hOnRuneSpawn,
 	hOnRuneSpawnPost,
-//	hOnRuneTouch,
+	hOnRunePickup,
 	hCanBeTouched
-;
-
-RuneTypes
-	iRuneTypes[1 << 11] = { Rune_Invalid, ... }		// Abysmal
 ;
 
 Handle
 	hItemCanBeTouchedByPlayer,
-//	hMyTouch,
-	hCreateRune
-//	hDropRune
+	hMyTouch,
+	hCreateRune,
+	hDropRune
 ;
 
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
 	CreateNative("TF2_CreateRune", Native_CreateRune);
-	CreateNative("TF2_GetRuneType", Native_GetRuneType);
-//	CreateNative("TF2_DropRune", Native_DropRune);
+	CreateNative("TF2_DropRune", Native_DropRune);
 
-	hOnRuneSpawn 		= new GlobalForward("TF2_OnRuneSpawn", ET_Hook, Param_Array, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_CellByRef);
-	hOnRuneSpawnPost 	= new GlobalForward("TF2_OnRuneSpawnPost", ET_Ignore, Param_Cell, Param_Array, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
-//	hOnRuneTouch		= new GlobalForward("TF2_OnRunePickup", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
+	hOnRuneSpawn 		= new GlobalForward("TF2_OnRuneSpawn", ET_Hook, Param_Array, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_Array);
+	hOnRuneSpawnPost 	= new GlobalForward("TF2_OnRuneSpawnPost", ET_Ignore, Param_Cell, Param_Array, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Array);
+	hOnRunePickup		= new GlobalForward("TF2_OnRunePickup", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
 	hCanBeTouched 		= new GlobalForward("TF2_CanRuneBeTouched", ET_Hook, Param_Cell, Param_Cell, Param_CellByRef);
 
 	RegPluginLibrary("tf2powups");
@@ -58,11 +53,11 @@ public void OnPluginStart()
 	if (!hItemCanBeTouchedByPlayer)
 		SetFailState("Could not load hook for CTFRune::ItemCanBeTouchedByPlayer!");
 
-/*	hMyTouch = DHookCreate(0, HookType_Entity, ReturnType_Void, ThisPointer_CBaseEntity, CTFRune_MyTouch);
+	hMyTouch = DHookCreate(0, HookType_Entity, ReturnType_Bool, ThisPointer_CBaseEntity, CTFRune_MyTouch);
 	DHookSetFromConf(hMyTouch, conf, SDKConf_Virtual, "CTFRune::MyTouch");
 	DHookAddParam(hMyTouch, HookParamType_CBaseEntity);
 	if (!hMyTouch)
-		SetFailState("Could not load hook for CTFRune::MyTouch!");*/
+		SetFailState("Could not load hook for CTFRune::MyTouch!");
 
 	Handle hook = DHookCreateDetour(Address_Null, CallConv_CDECL, ReturnType_CBaseEntity, ThisPointer_Ignore);
 	DHookSetFromConf(hook, conf, SDKConf_Signature, "CTFRune::CreateRune");
@@ -71,9 +66,7 @@ public void OnPluginStart()
 	DHookAddParam(hook, HookParamType_Int);
 	DHookAddParam(hook, HookParamType_Bool);
 	DHookAddParam(hook, HookParamType_Bool);
-//	DHookAddParam(hook, HookParamType_Float);	// Vector passed plainly :/
-//	DHookAddParam(hook, HookParamType_Float);	// Fuck it honestly
-//	DHookAddParam(hook, HookParamType_Float);
+	DHookAddParam(hook, HookParamType_Object, 12);	// Thx Deathreus :D
 	if (!DHookEnableDetour(hook, false, CTFRune_CreateRune) || !DHookEnableDetour(hook, true, CTFRune_CreateRunePost))
 		SetFailState("Could not load detour for CTFRune::CreateRune!")
 
@@ -89,12 +82,13 @@ public void OnPluginStart()
 	if (!(hCreateRune = EndPrepSDKCall()))
 		SetFailState("Could not load call to CTFRune::CreateRune");
 
-/*	StartPrepSDKCall(SDKCall_Entity);
+	StartPrepSDKCall(SDKCall_Entity);
 	PrepSDKCall_SetFromConf(conf, SDKConf_Signature, "CTFPlayer::DropRune");
 	PrepSDKCall_AddParameter(SDKType_Bool, SDKPass_Plain);
 	PrepSDKCall_AddParameter(SDKType_PlainOldData, SDKPass_Plain);
+	PrepSDKCall_SetReturnInfo(SDKType_CBaseEntity, SDKPass_Pointer);
 	if (!(hDropRune = EndPrepSDKCall()))
-		SetFailState("Could not load call to CTFPlayer::DropRune");*/
+		SetFailState("Could not load call to CTFPlayer::DropRune");
 
 	delete conf;
 
@@ -116,14 +110,14 @@ public Action CmdSpawnRune(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action TF2_OnRuneSpawn(float pos[3], RuneTypes &type, int &idk, bool &idk2, bool &idk3)
+public Action TF2_OnRuneSpawn(float pos[3], RuneTypes &type, int &teammaybe, bool &thrown, bool &thrownz, float ang[3])
 {
-	PrintToServer("TF2_OnRuneSpawn((%.2f %.2f %.2f), %d, %d, %d, %d)", pos[0], pos[1], pos[2], type, idk, idk2, idk3);
+	PrintToServer("TF2_OnRuneSpawn({%.2f %.2f %.2f}, %d, %d, %d, %d, {%.2f %.2f %.2f})", pos[0], pos[1], pos[2], type, teammaybe, thrown, thrownz, ang[0], ang[1], ang[2]);
 }
 
-public void TF2_OnRuneSpawnPost(int rune, float pos[3], RuneTypes type, int idk, bool idk2, bool idk3)
+public void TF2_OnRuneSpawnPost(int rune, float pos[3], RuneTypes type, int teammaybe, bool thrown, bool thrownz, float ang[3])
 {
-	PrintToServer("TF2_OnRuneSpawnPost(%d, (%.2f %.2f %.2f), %d, %d, %d, %d)", rune, pos[0], pos[1], pos[2], type, idk, idk2, idk3);
+	PrintToServer("TF2_OnRuneSpawnPost(%d, {%.2f %.2f %.2f}, %d, %d, %d, %d, {%.2f, %.2f, %.2f})", rune, pos[0], pos[1], pos[2], type, teammaybe, thrown, thrownz, ang[0], ang[1], ang[2]);
 }
 
 public Action TF2_CanRuneBeTouched(int rune, int client, bool &status)
@@ -131,10 +125,10 @@ public Action TF2_CanRuneBeTouched(int rune, int client, bool &status)
 	PrintToServer("TF2_CanRuneBeTouched(%d, %d, %d)", rune, client, status);
 }
 
-/*public void TF2_OnRunePickup(int rune, int client, RuneTypes type)
+public void TF2_OnRunePickup(int rune, int client, RuneTypes type)
 {
 	PrintToServer("TF2_OnRunePickup(%d, %d, %d)", rune, client, type);
-}*/
+}
 
 #endif
 
@@ -142,15 +136,9 @@ public void OnEntityCreated(int ent, const char[] classname)
 {
 	if (!strncmp(classname, "item_power", 10, false))
 	{
-		DHookEntity(hItemCanBeTouchedByPlayer, true, ent);
-//		DHookEntity(hMyTouch, true, ent);
+		DHookEntity(hItemCanBeTouchedByPlayer, false, ent);
+		DHookEntity(hMyTouch, true, ent);
 	}
-}
-
-public void OnEntityDestroyed(int ent, const char[] classname)
-{
-	if (!strncmp(classname, "item_power", 10, false))
-		iRuneTypes[ent & 0x7FF] = Rune_Invalid;
 }
 
 public MRESReturn CTFRune_ItemCanBeTouchedByPlayer(int pThis, Handle hReturn, Handle hParams)
@@ -168,29 +156,32 @@ public MRESReturn CTFRune_ItemCanBeTouchedByPlayer(int pThis, Handle hReturn, Ha
 	if (action == Plugin_Changed)
 	{
 		DHookSetReturn(hReturn, status);
-		return MRES_Override;
+		return MRES_Supercede;
 	}
 	else if (action >= Plugin_Handled)
 	{
 		DHookSetReturn(hReturn, false);
-		return MRES_Override;
+		return MRES_Supercede;
 	}
 
 	return MRES_Ignored;
 }
 
-/*public MRESReturn CTFRune_MyTouch(int pThis, Handle hParams)
+public MRESReturn CTFRune_MyTouch(int pThis, Handle hReturn, Handle hParams)
 {
 	int other = DHookGetParam(hParams, 1);
-	if (!other)	// Can be world apparently
+	if (!DHookGetReturn(hReturn))	// Player is cloaked, has a rune already, wrong team, in respawn room, etc
 		return MRES_Ignored;
 
-	Call_StartForward(hOnRuneTouch);
-	Call_PushCell(pThis);
+	// If return is false, then other is valid
+
+	Call_StartForward(hOnRunePickup);
 	Call_PushCell(other);
+	Call_PushCell(pThis);
+	Call_PushCell(TF2_GetRuneType(pThis));
 	Call_Finish();
 	return MRES_Ignored;
-}*/
+}
 
 public MRESReturn CTFRune_CreateRune(Handle hReturn, Handle hParams)
 {
@@ -200,6 +191,8 @@ public MRESReturn CTFRune_CreateRune(Handle hReturn, Handle hParams)
 	int idk = DHookGetParam(hParams, 3);
 	bool idk2 = DHookGetParam(hParams, 4);
 	bool idk3 = DHookGetParam(hParams, 5);
+	float vel[3];
+	DHookGetParamObjectPtrVarVector(hParams, 6, 0, ObjectValueType_Vector, vel);
 	Action action;
 
 	Call_StartForward(hOnRuneSpawn);
@@ -208,6 +201,7 @@ public MRESReturn CTFRune_CreateRune(Handle hReturn, Handle hParams)
 	Call_PushCellRef(idk);
 	Call_PushCellRef(idk2);
 	Call_PushCellRef(idk3);
+	Call_PushArrayEx(vel, 3, SM_PARAM_COPYBACK);
 	Call_Finish(action);
 
 	if (action == Plugin_Changed)
@@ -217,6 +211,7 @@ public MRESReturn CTFRune_CreateRune(Handle hReturn, Handle hParams)
 		DHookSetParam(hParams, 3, idk);
 		DHookSetParam(hParams, 4, idk2);
 		DHookSetParam(hParams, 5, idk3);
+		DHookSetParamObjectPtrVarVector(hParams, 6, 0, ObjectValueType_Vector, vel);
 		return MRES_ChangedHandled;
 	}
 	else if (action >= Plugin_Handled)
@@ -237,6 +232,8 @@ public MRESReturn CTFRune_CreateRunePost(Handle hReturn, Handle hParams)
 	int idk = DHookGetParam(hParams, 3);
 	bool idk2 = DHookGetParam(hParams, 4);
 	bool idk3 = DHookGetParam(hParams, 5);
+	float vel[3];
+	DHookGetParamObjectPtrVarVector(hParams, 6, 0, ObjectValueType_Vector, vel);
 
 	Call_StartForward(hOnRuneSpawnPost);
 	Call_PushCell(rune);
@@ -245,9 +242,9 @@ public MRESReturn CTFRune_CreateRunePost(Handle hReturn, Handle hParams)
 	Call_PushCell(idk);
 	Call_PushCell(idk2);
 	Call_PushCell(idk3);
+	Call_PushArray(vel, 3);
 	Call_Finish();
 
-	iRuneTypes[rune] = runetype;
 	return MRES_Ignored;
 }
 
@@ -258,40 +255,24 @@ public any Native_CreateRune(Handle plugin, int numParams)
 	return CreateRune(pos, GetNativeCell(2), GetNativeCell(3), GetNativeCell(4), GetNativeCell(5), idk4);
 }
 
-public any Native_GetRuneType(Handle plugin, int numParams)
-{
-	int rune = GetNativeCell(1) & 0xFFF;
-
-	if (!IsValidEntity(rune))
-		return ThrowNativeError(SP_ERROR_NATIVE, "Entity %d is invalid!", rune);
-
-	char cls[32]; GetEntityClassname(rune, cls, sizeof(cls));
-	PrintToServer("%s", cls);
-
-	if (StrContains(cls, "item_powerup"))
-		return ThrowNativeError(SP_ERROR_NATIVE, "Entity %d is not a powerup rune!", rune);
-
-	return iRuneTypes[rune];
-}
-
-/*public any Native_DropRune(Handle plugin, int numParams)
+public any Native_DropRune(Handle plugin, int numParams)
 {
 	int client = GetNativeCell(1);
 	if (!IsClientInGame(client) || !IsPlayerAlive(client))
-		return;
+		return -1;
 
 	if (!TF2_IsPlayerInCondition(client, TFCond_HasRune))
-		return;
+		return -1;
 
-	DropRune(client, GetNativeCell(2), GetNativeCell(3));
-}*/
-
-stock int CreateRune(float pos[3], RuneTypes runetype, int idk = -2, bool idk2 = false, bool idk3 = false, float idk4[3] = {0.0, 0.0, 0.0})
-{
-	return SDKCall(hCreateRune, pos, runetype, idk, idk2, idk3, idk4);
+	return DropRune(client, GetNativeCell(2), GetNativeCell(3));
 }
 
-/*stock void DropRune(int client, bool idk, int idk2)
+stock int CreateRune(float pos[3], RuneTypes runetype, int teammaybe = -2, bool idk2 = false, bool idk3 = false, float idk4[3] = {0.0, 0.0, 0.0})
 {
-	SDKCall(hDropRune, client, idk, idk2);
-}*/
+	return SDKCall(hCreateRune, pos, runetype, teammaybe, idk2, idk3, idk4);
+}
+
+stock int DropRune(int client, bool idk, int teammaybe)
+{
+	return SDKCall(hDropRune, client, idk, teammaybe);
+}
