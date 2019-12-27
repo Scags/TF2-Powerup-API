@@ -66,7 +66,7 @@ public void OnPluginStart()
 	DHookAddParam(hook, HookParamType_Int);
 	DHookAddParam(hook, HookParamType_Bool);
 	DHookAddParam(hook, HookParamType_Bool);
-	DHookAddParam(hook, HookParamType_Object, 12);	// Thx Deathreus :D
+	DHookAddParam(hook, HookParamType_Object, 12, DHookPass_ByVal|DHookPass_ODTOR|DHookPass_OCTOR|DHookPass_OASSIGNOP);	// Thx Deathreus :D
 	if (!DHookEnableDetour(hook, false, CTFRune_CreateRune) || !DHookEnableDetour(hook, true, CTFRune_CreateRunePost))
 		SetFailState("Could not load detour for CTFRune::CreateRune!")
 
