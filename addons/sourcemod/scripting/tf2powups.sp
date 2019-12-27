@@ -39,8 +39,8 @@ public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max
 	CreateNative("TF2_GetRuneType", Native_GetRuneType);
 //	CreateNative("TF2_DropRune", Native_DropRune);
 
-	hOnRuneSpawn 		= new GlobalForward("TF2_OnRuneSpawn", ET_Hook, Param_Array, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_Array);
-	hOnRuneSpawnPost 	= new GlobalForward("TF2_OnRuneSpawnPost", ET_Ignore, Param_Cell, Param_Array, Param_Cell, Param_Cell, Param_Cell, Param_Cell, Param_Array);
+	hOnRuneSpawn 		= new GlobalForward("TF2_OnRuneSpawn", ET_Hook, Param_Array, Param_CellByRef, Param_CellByRef, Param_CellByRef, Param_CellByRef);
+	hOnRuneSpawnPost 	= new GlobalForward("TF2_OnRuneSpawnPost", ET_Ignore, Param_Cell, Param_Array, Param_Cell, Param_Cell, Param_Cell, Param_Cell);
 //	hOnRuneTouch		= new GlobalForward("TF2_OnRunePickup", ET_Ignore, Param_Cell, Param_Cell, Param_Cell);
 	hCanBeTouched 		= new GlobalForward("TF2_CanRuneBeTouched", ET_Hook, Param_Cell, Param_Cell, Param_CellByRef);
 
@@ -71,7 +71,9 @@ public void OnPluginStart()
 	DHookAddParam(hook, HookParamType_Int);
 	DHookAddParam(hook, HookParamType_Bool);
 	DHookAddParam(hook, HookParamType_Bool);
-	DHookAddParam(hook, HookParamType_VectorPtr);
+//	DHookAddParam(hook, HookParamType_Float);	// Vector passed plainly :/
+//	DHookAddParam(hook, HookParamType_Float);	// Fuck it honestly
+//	DHookAddParam(hook, HookParamType_Float);
 	if (!DHookEnableDetour(hook, false, CTFRune_CreateRune) || !DHookEnableDetour(hook, true, CTFRune_CreateRunePost))
 		SetFailState("Could not load detour for CTFRune::CreateRune!")
 
@@ -114,14 +116,14 @@ public Action CmdSpawnRune(int client, int args)
 	return Plugin_Handled;
 }
 
-public Action TF2_OnRuneSpawn(float pos[3], RuneTypes &type, int &idk, bool &idk2, bool &idk3, float vel[3])
+public Action TF2_OnRuneSpawn(float pos[3], RuneTypes &type, int &idk, bool &idk2, bool &idk3)
 {
-	PrintToServer("TF2_OnRuneSpawn((%.2f %.2f %.2f), %d, %d, %d, %d, (%.2f %.2f %.2f))", pos[0], pos[1], pos[2], type, idk, idk2, idk3, vel[0], vel[1], vel[2]);
+	PrintToServer("TF2_OnRuneSpawn((%.2f %.2f %.2f), %d, %d, %d, %d)", pos[0], pos[1], pos[2], type, idk, idk2, idk3);
 }
 
-public void TF2_OnRuneSpawnPost(int rune, float pos[3], RuneTypes type, int idk, bool idk2, bool idk3, float vel[3])
+public void TF2_OnRuneSpawnPost(int rune, float pos[3], RuneTypes type, int idk, bool idk2, bool idk3)
 {
-	PrintToServer("TF2_OnRuneSpawnPost(%d, (%.2f %.2f %.2f), %d, %d, %d, %d, (%.2f %.2f %.2f))", rune, pos[0], pos[1], pos[2], type, idk, idk2, idk3, vel[0], vel[1], vel[2]);
+	PrintToServer("TF2_OnRuneSpawnPost(%d, (%.2f %.2f %.2f), %d, %d, %d, %d)", rune, pos[0], pos[1], pos[2], type, idk, idk2, idk3);
 }
 
 public Action TF2_CanRuneBeTouched(int rune, int client, bool &status)
@@ -148,7 +150,7 @@ public void OnEntityCreated(int ent, const char[] classname)
 public void OnEntityDestroyed(int ent, const char[] classname)
 {
 	if (!strncmp(classname, "item_power", 10, false))
-		iRuneTypes[EntRefToEntIndex(ent)] = Rune_Invalid;
+		iRuneTypes[ent & 0x7FF] = Rune_Invalid;
 }
 
 public MRESReturn CTFRune_ItemCanBeTouchedByPlayer(int pThis, Handle hReturn, Handle hParams)
@@ -192,12 +194,12 @@ public MRESReturn CTFRune_ItemCanBeTouchedByPlayer(int pThis, Handle hReturn, Ha
 
 public MRESReturn CTFRune_CreateRune(Handle hReturn, Handle hParams)
 {
-	float pos[3]; DHookGetParamVector(hParams, 1, pos);
+	float pos[3];
+	DHookGetParamVector(hParams, 1, pos);
 	RuneTypes runetype = DHookGetParam(hParams, 2);
 	int idk = DHookGetParam(hParams, 3);
 	bool idk2 = DHookGetParam(hParams, 4);
 	bool idk3 = DHookGetParam(hParams, 5);
-	float vel[3]; DHookGetParamVector(hParams, 6, vel);
 	Action action;
 
 	Call_StartForward(hOnRuneSpawn);
@@ -206,7 +208,6 @@ public MRESReturn CTFRune_CreateRune(Handle hReturn, Handle hParams)
 	Call_PushCellRef(idk);
 	Call_PushCellRef(idk2);
 	Call_PushCellRef(idk3);
-	Call_PushArrayEx(vel, 3, SM_PARAM_COPYBACK);
 	Call_Finish(action);
 
 	if (action == Plugin_Changed)
@@ -216,7 +217,6 @@ public MRESReturn CTFRune_CreateRune(Handle hReturn, Handle hParams)
 		DHookSetParam(hParams, 3, idk);
 		DHookSetParam(hParams, 4, idk2);
 		DHookSetParam(hParams, 5, idk3);
-		DHookSetParamVector(hParams, 6, vel);
 		return MRES_ChangedHandled;
 	}
 	else if (action >= Plugin_Handled)
@@ -228,12 +228,15 @@ public MRESReturn CTFRune_CreateRune(Handle hReturn, Handle hParams)
 public MRESReturn CTFRune_CreateRunePost(Handle hReturn, Handle hParams)
 {
 	int rune = DHookGetReturn(hReturn);
-	float pos[3]; DHookGetParamVector(hParams, 1, pos);
+	float pos[3];
+//	if (!DHookIsNullParam(hParams, 1))
+//		DHookGetParamVector(hParams, 1, pos);	// Vector is free'd by this point I guess
+	GetEntPropVector(rune, Prop_Send, "m_vecOrigin", pos);	// z-axis is 48 hu higher than pre hook cuz valve lol
+
 	RuneTypes runetype = DHookGetParam(hParams, 2);
 	int idk = DHookGetParam(hParams, 3);
 	bool idk2 = DHookGetParam(hParams, 4);
 	bool idk3 = DHookGetParam(hParams, 5);
-	float vel[3]; DHookGetParamVector(hParams, 6, vel);
 
 	Call_StartForward(hOnRuneSpawnPost);
 	Call_PushCell(rune);
@@ -242,7 +245,6 @@ public MRESReturn CTFRune_CreateRunePost(Handle hReturn, Handle hParams)
 	Call_PushCell(idk);
 	Call_PushCell(idk2);
 	Call_PushCell(idk3);
-	Call_PushArray(vel, 3);
 	Call_Finish();
 
 	iRuneTypes[rune] = runetype;
@@ -252,16 +254,13 @@ public MRESReturn CTFRune_CreateRunePost(Handle hReturn, Handle hParams)
 public any Native_CreateRune(Handle plugin, int numParams)
 {
 	float pos[3]; GetNativeArray(1, pos, 3);
-	float vel[3]; GetNativeArray(6, vel, 3);
-	return CreateRune(pos, GetNativeCell(2), GetNativeCell(3), GetNativeCell(4), GetNativeCell(5), vel);
+	float idk4[3]; GetNativeArray(6, idk4, 3);
+	return CreateRune(pos, GetNativeCell(2), GetNativeCell(3), GetNativeCell(4), GetNativeCell(5), idk4);
 }
 
 public any Native_GetRuneType(Handle plugin, int numParams)
 {
-	int rune = GetNativeCell(1);
-	if (rune & (1 << 31))
-		rune = EntRefToEntIndex(rune);
-//	rune &= ~(1 << 31);	// No refs
+	int rune = GetNativeCell(1) & 0xFFF;
 
 	if (!IsValidEntity(rune))
 		return ThrowNativeError(SP_ERROR_NATIVE, "Entity %d is invalid!", rune);
@@ -287,9 +286,9 @@ public any Native_GetRuneType(Handle plugin, int numParams)
 	DropRune(client, GetNativeCell(2), GetNativeCell(3));
 }*/
 
-stock int CreateRune(float pos[3], RuneTypes runetype, int idk = -2, bool idk2 = false, bool idk3 = false, float vel[3] = {0.0, 0.0, 0.0})
+stock int CreateRune(float pos[3], RuneTypes runetype, int idk = -2, bool idk2 = false, bool idk3 = false, float idk4[3] = {0.0, 0.0, 0.0})
 {
-	return SDKCall(hCreateRune, pos, runetype, idk, idk2, idk3, vel);
+	return SDKCall(hCreateRune, pos, runetype, idk, idk2, idk3, idk4);
 }
 
 /*stock void DropRune(int client, bool idk, int idk2)

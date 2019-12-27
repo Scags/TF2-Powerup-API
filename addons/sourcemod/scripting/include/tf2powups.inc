@@ -3,28 +3,29 @@
 #endif
 #define _tf2powups_included
 
-enum RuneTypes
+enum eRuneTypes
 {
 	Rune_Invalid = -1,
+	Rune_Strength,
+	Rune_Haste,
+	Rune_Regen,
+	Rune_Resist,
+	Rune_Vampire,
+	Rune_Reflect,
+	Rune_Precision,
+	Rune_Agility,
 	Rune_Plague,
 	Rune_King,
 	Rune_Knockout,
-	Rune_Agility,
-	Rune_Precision,
-	Rune_Reflect,	// Warlock
-	Rune_Vampire,
-	Rune_Resist,
-	Rune_Regen,
 	Rune_Supernova,
-	Rune_Haste,
-	Rune_Strength,
 
 	Rune_LENGTH
 }
 
-#define RuneTypes_t RuneTypes 	// Cuz
+#define RuneTypes eRuneTypes
+#define RuneTypes_t eRuneTypes 	// Cuz
 
-native int TF2_CreateRune(float pos[3], RuneTypes type, int idk = -2, bool idk2 = false, bool idk3 = false, float vel[3] = {0.0, 0.0, 0.0});
+native int TF2_CreateRune(float pos[3], RuneTypes type, int teammaybe = -2, bool idk2 = false, bool idk3 = false, float noclue[3] = {0.0, 0.0, 0.0});
 
 native RuneTypes TF2_GetRuneType(int rune);
 
@@ -32,8 +33,8 @@ native RuneTypes TF2_GetRuneType(int rune);
 //native void TF2_DropRune(int client, bool idk, int idk2);
 
 
-forward Action TF2_OnRuneSpawn(float pos[3], RuneTypes &type, int &idk, bool &idk2, bool &idk3, float vel[3])
-forward void TF2_OnRuneSpawnPost(int rune, float pos[3], RuneTypes type, int idk, bool idk2, bool idk3, float vel[3])
+forward Action TF2_OnRuneSpawn(float pos[3], RuneTypes &type, int &teammaybe, bool &idk2, bool &idk3)
+forward void TF2_OnRuneSpawnPost(int rune, float pos[3], RuneTypes type, int teammaybe, bool idk2, bool idk3)
 
 forward Action TF2_CanRuneBeTouched(int rune, int client, bool &status);
 
