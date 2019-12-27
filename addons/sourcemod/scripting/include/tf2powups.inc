@@ -58,12 +58,12 @@ native int TF2_CreateRune(float pos[3], RuneTypes type, int teammaybe = -2, bool
  *	Force a client to drop a rune that they are carrying
  *
  *	@param client 		Client to force to drop their rune
- *	@param idk 			Same as 'idk2' in TF2_CreateRune
+ *	@param throw 		Same as 'thrown' in TF2_CreateRune
  *	@param teammaybe 	Same as 'teammaybe' in TF2_CreateRune
  *
  *	@return 			Rune that was dropped, -1 if there wasn't one
 **/
-native int TF2_DropRune(int client, bool idk, int teammaybe);
+native int TF2_DropRune(int client, bool throw, int teammaybe);
 
 /**
  *	When a rune is created
