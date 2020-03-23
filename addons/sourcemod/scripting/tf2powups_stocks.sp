@@ -23,7 +23,7 @@ enum eRuneTypes
 #define RuneTypes eRuneTypes
 #define RuneTypes_t eRuneTypes 	// Cuz
 
-stock int MakeRune(RuneTypes type, float pos[3], float ang[3] = {0.0, 0.0, 0.0}, float vel[3] = {0.0, 0.0, 0.0})
+stock int MakeRune(RuneTypes type, float pos[3], float ang[3] = NULL_VECTOR, float vel[3] = NULL_VECTOR)
 {
 	int ent = CreateEntityByName("item_powerup_rune");
 	TeleportEntity(ent, pos, ang, vel);
